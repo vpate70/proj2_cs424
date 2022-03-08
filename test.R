@@ -7,10 +7,7 @@ library(jpeg)
 library(grid)
 library(leaflet)
 library(scales)
-options(scipen=10000)
-#_ = ' '
-#__ = '/'
-#___ = '-'
+
 allstations <- c('Jefferson_Park.csv', 'Cermak-Chinatown.csv', 'Central-Lake.csv', 'Dempster-Skokie.csv', 'Dempster.csv', 'Lake__State.csv', 'Oak_Park-Forest_Park.csv', 'Kedzie-Homan-Forest_Park.csv', '35th__Archer.csv', 'Addison-North_Main.csv', 'Main.csv', 'Chicago__State.csv', 'Wellington.csv', 'Austin-Forest_Park.csv', 'Clinton-Lake.csv', 'East_63rd-Cottage_Grove.csv', 'Grand__State.csv', 'Wilson.csv', 'Cicero-Cermak.csv', 'State__Lake.csv', '51st.csv', '95th__Dan_Ryan.csv', 'Jackson__State.csv', 'Randolph__Wabash.csv', 'Logan_Square.csv', 'Morse.csv', 'Grand__Milwaukee.csv', '69th.csv', 'Paulina.csv', 'Damen-Brown.csv', 'Washington__Dearborn.csv', 'Kimball.csv', 'Clark__Lake.csv', 'Lawrence.csv', 'Polk.csv', '47th-Dan_Ryan.csv', 'Sedgwick.csv', '54th__Cermak.csv', 'Ashland__63rd.csv', 'Morgan-Lake.csv', 'Harrison.csv', 'Sheridan.csv', 'Racine.csv', 'Washington__Wells.csv', 'Quincy__Wells.csv', 'Foster.csv', 'California__Milwaukee.csv', 'Cermak-McCormick_Place.csv', 'Sox-35th-Dan_Ryan.csv', 'Chicago__Milwaukee.csv', "O'Hare_Airport.csv", 'Kedzie-Lake.csv', 'Fullerton.csv', 'Irving_Park-Brown.csv', 'LaSalle__Van_Buren.csv', 'Belmont-North_Main.csv', '79th.csv', 'Adams__Wabash.csv', 'Western-Orange.csv', 'Clinton-Forest_Park.csv', 'UIC-Halsted.csv', '35-Bronzeville-IIT.csv', '87th.csv', '18th.csv', 'Indiana.csv', 'Monroe__State.csv', "Irving_Park-O'Hare.csv", 'Cumberland.csv', 'Roosevelt.csv', 'Damen__Milwaukee.csv', 'Kedzie-Midway.csv', '63rd-Dan_Ryan.csv', 'Kedzie-Cermak.csv', 'Addison-Brown.csv', 'Division__Milwaukee.csv', 'Damen-Cermak.csv', 'Cicero-Lake.csv', 'Madison__Wabash.csv', 'Harlem-Lake.csv', 'Pulaski-Cermak.csv', 'Kedzie-Brown.csv', 'Central_Park.csv', "Harlem-O'Hare.csv", 'Chicago__Franklin.csv', 'North__Clybourn.csv', 'Berwyn.csv', 'Laramie.csv', 'Howard.csv', 'Granville.csv', 'Western-Forest_Park.csv', 'California-Cermak.csv', 'Ridgeland.csv', 'Western-Cermak.csv', 'Halsted__63rd.csv', 'Pulaski-Forest_Park.csv', 'Montrose-Brown.csv', 'Linden.csv', 'Pulaski-Lake.csv', 'Harlem-Forest_Park.csv', 'Ashland-Orange.csv', 'Garfield-Dan_Ryan.csv', 'Halsted-Orange.csv', "Addison-O'Hare.csv", 'Pulaski-Orange.csv', 'Noyes.csv', '47th-South_Elevated.csv', 'Merchandise_Mart.csv', 'Midway_Airport.csv', '43rd.csv', 'Western__Milwaukee.csv', 'Ashland-Lake.csv', "Belmont-O'Hare.csv", 'Oak_Park-Lake.csv', 'Conservatory.csv', 'Library.csv', 'Loyola.csv', 'Southport.csv', "Montrose-O'Hare.csv", 'Jarvis.csv', 'South_Boulevard.csv', 'Cicero-Forest_Park.csv', 'Medical_Center.csv', 'Davis.csv', 'Clark__Division.csv', 'Jackson__Dearborn.csv', 'Washington__Wabash.csv', 'Francisco.csv', 'Central-Evanston.csv', 'Oakton-Skokie.csv', 'Austin-Lake.csv', 'Bryn_Mawr.csv', 'Kostner.csv', 'Forest_Park.csv', 'California-Lake.csv', 'Garfield-South_Elevated.csv', 'Rockwell.csv', 'Diversey.csv', 'Argyle.csv', 'LaSalle.csv', 'Monroe__Dearborn.csv', 'Rosemont.csv', 'King_Drive.csv', 'Armitage.csv', 'Thorndale.csv', 'Western-Brown.csv', 'Skokie.csv', 'Washington__State.csv', 'Homan.csv')
 s_Jefferson_Park<-read.csv(file = "data/Jefferson_Park.csv")
 s_Cermak___Chinatown<-read.csv(file = "data/Cermak-Chinatown.csv")
@@ -160,42 +157,3 @@ s_Western___Brown<-read.csv(file = "data/Western-Brown.csv")
 s_Skokie<-read.csv(file = "data/Skokie.csv")
 s_Washington__State<-read.csv(file = "data/Washington__State.csv")
 s_Homan<-read.csv(file = "data/Homan.csv")
-
-# Define UI for application that draws a histogram
-ui <- fluidPage(
-
-    # Application title
-    titlePanel("Old Faithful Geyser Data"),
-
-    # Sidebar with a slider input for number of bins 
-    sidebarLayout(
-        sidebarPanel(
-            sliderInput("bins",
-                        "Number of bins:",
-                        min = 1,
-                        max = 50,
-                        value = 30)
-        ),
-
-        # Show a plot of the generated distribution
-        mainPanel(
-           plotOutput("distPlot")
-        )
-    )
-)
-
-# Define server logic required to draw a histogram
-server <- function(input, output) {
-
-    output$distPlot <- renderPlot({
-        # generate bins based on input$bins from ui.R
-        x    <- faithful[, 2]
-        bins <- seq(min(x), max(x), length.out = input$bins + 1)
-
-        # draw the histogram with the specified number of bins
-        hist(x, breaks = bins, col = 'darkgray', border = 'white')
-    })
-}
-
-# Run the application 
-shinyApp(ui = ui, server = server)

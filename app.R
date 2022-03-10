@@ -13,7 +13,7 @@ options(scipen=10000)
 #_ = ' '
 #__ = '/'
 #___ = '-'
-# changed above to underlines so i could make them variable names ans file names
+# changed above to underlines so i could make them variable names and file names
 s_Jefferson_Park <- readRDS(file = "rdata/Jefferson_Park.rds")
 s_Cermak___Chinatown <- readRDS(file = "rdata/Cermak-Chinatown.rds")
 s_Central___Lake <- readRDS(file = "rdata/Central-Lake.rds")
@@ -167,12 +167,16 @@ dfMerge <- do.call("rbind", allstationdf)
 dfMerge <- dfMerge[order(dfMerge$stationname),]
 
 latlonstation <- read.csv(file = 'data/lonlat.csv')
-# Define UI for application that draws a histogram
+
+x_con <- sort(c("Daily", "Monthly", "Week Day", "All For Year", "Default"))
+tflist <- c("FALSE","TRUE")
+# Define UI for application
 ui <- dashboardPage(
   dashboardHeader(title = "CS 424 Spring 2022 Project 2"),
   #edit to make mini menu items for both
   
-  dashboardSidebar(disable = FALSE, collapsed = FALSE,
+  dashboardSidebar(disable = FALSE, collapsed = FALSE, width = 275,
+                  
                    
                    sidebarMenu(
                      menuItem("", tabName = "cheapBlankSpace", icon = NULL),
@@ -183,20 +187,26 @@ ui <- dashboardPage(
                      menuItem("", tabName = "cheapBlankSpace", icon = NULL),
                      menuItem("", tabName = "cheapBlankSpace", icon = NULL),
                      menuItem("", tabName = "cheapBlankSpace", icon = NULL),
-                     menuItem("", tabName = "cheapBlankSpace", icon = NULL)),
-                   #Options for left graphs
-                   menuItem("Left options",
-                            selectInput("rstation_name", "Select the station name", unique(dfMerge$stationname), selected = "O'Hare")
-                   ),
+                     menuItem("", tabName = "cheapBlankSpace", icon = NULL)
+                     ),
                    #Options for right graphs
                    menuItem("Right options",
-                            selectInput("rstation_name", "Select the station name", unique(dfMerge$stationname), selected = "O'Hare")
+                            selectInput("rstation_name", "Select the station name", unique(dfMerge$stationname), selected = "O'Hare"),
+                            selectInput("rYear", "Select the year to visualize", unique(dfMerge[order(-dfMerge$the_year),]$the_year), selected = 2021),
+                            selectInput("rtype_x", "Select the constraint", x_con, selected = "Default"),
+                            selectInput("rtableCheck", "Show Table Values",tflist, selected = "FALSE")
                    ),
                    #Option to change page to about section
                    menuItem("Page options",
                             selectInput("pageOption", "Select page", c("Data","About"), selected = "Data")
+                   ),
+                   menuItem("Left Options",
+                   actionButton("reset_button", "Reset Map View"),
+                     actionButton("prev_day", "Prev Day"),
+                     actionButton("next_day", "Next Day"),
+                   dateInput("date",label = "date1"), #set to aug date and add functionality
+                   dateRangeInput("date",label = "Choose Two Dates")
                    )
-                   
   ),
   
   dashboardBody(
@@ -206,15 +216,15 @@ ui <- dashboardPage(
         fluidRow(
           column(6,
                  fluidRow(
-                   plotOutput("test",width="100%"),
+                   plotOutput("main",width="100%"),
                  ),
                  fluidRow(
                    leafletOutput("leaf"),
                  ),
-                 fluidRow(actionButton("reset_button", "Reset view"
-                                       )),
+                 
           ),
           column(6,
+                 plotOutput("rightBox",width="100%"),
           )
          
         )
@@ -225,6 +235,7 @@ ui <- dashboardPage(
       fluidRow(
         h1("About Page"),
         p("The data is from https://data.cityofchicago.org/Transportation/CTA-Ridership-L-Station-Entries-Daily-Totals/5neh-572f"),
+        p("and https://data.cityofchicago.org/Transportation/CTA-System-Information-List-of-L-Stops/8pix-ypme"),
         p("Vivek Patel wrote this application."),
         p("Created: Spring 2022, March"),
         p("The application was created for Project 2 of Spring 2022 CS 424 with Dr. Johnson")
@@ -236,7 +247,31 @@ ui <- dashboardPage(
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
-  #change zoom based on map and make button to change it
+  stationReactive <- reactive({
+    # input$rstationname
+    for(sdf in allstationdf){
+      if(sdf$stationname[1] == input$rstation_name){
+        return(sdf)
+      }
+    }
+  })
+  
+  output$rightui <- renderUI({
+    
+  })
+  
+  output$rightBox <- renderPlot({
+    if(input$rtype_x == "Default")
+    {
+      #Output plot based on what station is selected
+        #Add all the ride totals based on entries at selected station for all years, then plot
+        rdf <- stationReactive()
+        df <- aggregate(rdf$rides, by=list(Category=rdf$the_year), FUN=sum)
+        ggplot(df, aes(x=Category, y=x)) + geom_bar( stat='identity', fill="blue") + 
+          labs(x="Date", y="Rides")+ scale_y_continuous(label=comma)+ggtitle(paste("All time ridership for",input$rstation_name,"Station"))
+        }
+  })
+  #change zoom based on map and make button to change it add explanation why the 3 backgrounds are good
    backgroundMap <- reactive({ 
      t = 0
      if(t==0){
@@ -250,7 +285,7 @@ server <- function(input, output) {
      }
    })
   
-    output$test <- renderPlot({
+    output$main <- renderPlot({
       df <- subset(dfMerge, updated_date == "2021-8-23")
       ggplot(df, aes(x=stationname, y=rides)) + geom_bar( stat='identity', fill='blue') + 
         labs(x="Date", y="Rides")+ scale_y_continuous(label=comma) + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
@@ -264,9 +299,13 @@ server <- function(input, output) {
       map <- addTiles(map)
       map <- setView(map, lng = -87.683177, lat = 41.921832, zoom = 9.5)
       map <- addMarkers(map, lng = latlonstation$Long, lat = latlonstation$Lat, popup = latlonstation$STATION_NAME)
-      map <- addTiles(map = map, urlTemplate = "https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png")
+      map <- addTiles(map = map, urlTemplate = backgroundMap())
       map
-      # Stadia.AlidadeSmoothDark
+    })
+    
+    output$mapui <- renderUI({
+      tags$style(type = "text/css", "#map {height: calc(100vh - 80px) !important;}")
+      leafletOutput("leaf")
     })
     
     observe({

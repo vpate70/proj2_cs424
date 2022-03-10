@@ -5,9 +5,9 @@ account: vpate70
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 5809255
-bundleId: 5664454
+bundleId: 5664493
 url: https://vpate70.shinyapps.io/proj2/
-when: 1646878683.909
-lastSyncTime: 1646878683.909
+when: 1646879673.32999
+lastSyncTime: 1646879673.32999
 asMultiple: FALSE
 asStatic: FALSE

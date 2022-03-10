@@ -7,6 +7,7 @@ library(jpeg)
 library(grid)
 library(leaflet)
 library(scales)
+library(leaflet.providers)
 options(scipen=10000)
 #load in all data
 #_ = ' '
@@ -166,7 +167,6 @@ dfMerge <- do.call("rbind", allstationdf)
 dfMerge <- dfMerge[order(dfMerge$stationname),]
 
 latlonstation <- read.csv(file = 'data/lonlat.csv')
-
 # Define UI for application that draws a histogram
 ui <- dashboardPage(
   dashboardHeader(title = "CS 424 Spring 2022 Project 2"),
@@ -233,9 +233,22 @@ ui <- dashboardPage(
   )
 )
 
+
 # Define server logic required to draw a histogram
 server <- function(input, output) {
-
+  #change zoom based on map and make button to change it
+   backgroundMap <- reactive({ 
+     t = 0
+     if(t==0){
+      return("https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png")
+     }
+     else if(t == 1){
+       return("https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png")
+     }
+     else{
+       return("https://server.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/tile/{z}/{y}/{x}")
+     }
+   })
   
     output$test <- renderPlot({
       df <- subset(dfMerge, updated_date == "2021-8-23")
@@ -251,8 +264,9 @@ server <- function(input, output) {
       map <- addTiles(map)
       map <- setView(map, lng = -87.683177, lat = 41.921832, zoom = 9.5)
       map <- addMarkers(map, lng = latlonstation$Long, lat = latlonstation$Lat, popup = latlonstation$STATION_NAME)
-      
+      map <- addTiles(map = map, urlTemplate = "https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png")
       map
+      # Stadia.AlidadeSmoothDark
     })
     
     observe({

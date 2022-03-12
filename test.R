@@ -1081,3 +1081,22 @@ latlonstation[nrow(latlonstation) + 1,] = c(-1, 'I','N/A', "Washington/State",-1
 # 41.884914, -87.711327
 latlonstation[nrow(latlonstation) + 1,] = c(-1, 'I','N/A', "Homan",-1,'N/A','N/A', 'N/A','N/A', 'N/A','N/A', 'N/A','N/A', 'N/A','N/A', 'N/A','N/A',41.8837000, -87.6278000)
 latlonstation$STATION_NAME == "Randolph/Wabash"
+
+df1 <- subset(dfMerge, updated_date == "2021-08-23")
+df1 <- data.frame(df1$rides,df1$stationname)
+colnames(df1) = c("rides","stationname")
+df2 <- subset(dfMerge, updated_date == "2011-08-22")
+df2 <- data.frame(df2$rides,df2$stationname)
+colnames(df2) = c("rides","stationname")
+stn <- setdiff(df1$stationname,df2$stationname)
+for(p in stn){
+  df2[nrow(df2) + 1,] <- c(0,p)
+}
+stn <- setdiff(df2$stationname,df1$stationname)
+for(x in stn){
+    df1[nrow(df1) + 1,] <- c(0,x)
+  }
+df <- merge(df1, df2, by = "stationname")
+
+df$rides <- as.numeric(df$rides.x) - as.numeric(df$rides.y)
+colnames(df) = c("rides","stationname")

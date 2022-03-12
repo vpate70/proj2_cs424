@@ -230,8 +230,14 @@ ui <- dashboardPage(
         fluidRow(
           column(6,
                  fluidRow(
-                   
-                   plotOutput("main",width="100%")
+                   conditionalPanel(
+                     condition = "input.datesChange == 'Two Day Differ'",
+                     plotOutput("main2",width="100%")
+                   ),
+                   conditionalPanel(
+                     condition = "input.datesChange == 'One Day'",
+                     plotOutput("main",width="100%")
+                   )
                    
                  ),
                  fluidRow(
@@ -239,7 +245,16 @@ ui <- dashboardPage(
                    splitLayout(
                      cellWidths = c('80%','20%'),
                      leafletOutput("leaf"),
-                     dataTableOutput("tab1")
+                     verticalLayout(
+                       conditionalPanel(
+                         condition = "input.datesChange == 'Two Day Differ'",
+                         dataTableOutput("tab2")
+                       ),
+                       conditionalPanel(
+                         condition = "input.datesChange == 'One Day'",
+                         dataTableOutput("tab1")
+                       )
+                     )
                    )
                  ),
                  
@@ -286,7 +301,6 @@ server <- function(input, output,session) {
   
   orderByReactive <- reactive({
     df <- subset(dfMerge, updated_date == input$date1)
-
     if(input$longGraphOrder == "Alphabetical"){
       return(
         ggplot(df, aes(x=stationname,y=rides)) + geom_bar( stat='identity', fill='steelblue') + 
@@ -310,10 +324,61 @@ server <- function(input, output,session) {
     }
   })
   
+  diffReactive <- reactive({
+    df <- changeDF()
+    if(input$longGraphOrder == "Alphabetical"){
+      return(
+        ggplot(df, aes(x=stationname,y=rides)) + geom_bar( stat='identity', fill='steelblue') + 
+          labs(x="Station", y="Rides")+ scale_y_continuous(label=comma) +ggtitle(label = paste(wday(ymd(dateOneReactive()),label=TRUE),month(ymd(dateOneReactive()),label=TRUE),day(ymd(dateOneReactive())),year(ymd(dateOneReactive())))) +theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)
+          )
+      )
+    }
+    else if(input$longGraphOrder == "Minimum"){
+      return(
+        ggplot(df, aes(reorder(stationname, rides),rides)) + geom_bar( stat='identity', fill='steelblue') + 
+          labs(x="Station", y="Rides")+ scale_y_continuous(label=comma) +ggtitle(label = paste(wday(ymd(dateOneReactive()),label=TRUE),month(ymd(dateOneReactive()),label=TRUE),day(ymd(dateOneReactive())),year(ymd(dateOneReactive())))) +theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)
+          )
+      )
+    }
+    else{
+      return(
+        ggplot(df, aes(reorder(stationname, -rides),rides)) + geom_bar( stat='identity', fill='steelblue') + 
+          labs(x="Station", y="Rides")+ scale_y_continuous(label=comma) +ggtitle(label = paste(wday(ymd(dateOneReactive()),label=TRUE),month(ymd(dateOneReactive()),label=TRUE),day(ymd(dateOneReactive())),year(ymd(dateOneReactive())))) +theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)
+          )
+      )
+    }
+  })
   
+  changeDF <- reactive({
+    df1 <- subset(dfMerge, updated_date == input$date1)
+    df1 <- data.frame(df1$rides,df1$stationname)
+    colnames(df1) = c("rides","stationname")
+    df2 <- subset(dfMerge, updated_date == input$date2)
+    df2 <- data.frame(df2$rides,df2$stationname)
+    colnames(df2) = c("rides","stationname")
+    stn <- setdiff(df1$stationname,df2$stationname)
+    for(p in stn){
+      df2[nrow(df2) + 1,] <- c(0,p)
+    }
+    stn <- setdiff(df2$stationname,df1$stationname)
+    for(x in stn){
+      df1[nrow(df1) + 1,] <- c(0,x)
+    }
+    df <- merge(df1, df2, by = "stationname")
+    
+    df$rides <- as.numeric(df$rides.x) - as.numeric(df$rides.y)
+    colnames(df) = c("stationname","ridex","ridey","rides")
+    return(df)
+  })
   
   output$tab1 <- DT::renderDataTable(
     subset(dfMerge, updated_date == dateOneReactive())[ , c("stationname", "rides")] , 
+    options = list(searching = FALSE, pageLength = 20, lengthChange = FALSE, order = list(list(0, 'asc'))
+    ), rownames = FALSE 
+  )
+  
+  output$tab2 <- DT::renderDataTable(
+    changeDF(), 
     options = list(searching = FALSE, pageLength = 20, lengthChange = FALSE, order = list(list(0, 'asc'))
     ), rownames = FALSE 
   )
@@ -337,6 +402,10 @@ server <- function(input, output,session) {
     }
       
     )  
+    
+    output$main2 <- renderPlot({
+      diffReactive()
+    })
     
     output$leaf <- renderLeaflet({
       map <- leaflet()
@@ -595,100 +664,7 @@ server <- function(input, output,session) {
         }
       }
     })
-          # if(input$station_name == "UIC-Halsted"){
-          #   df_halsted <- aggregate(ridership_halsted$rides, by=list(Category=ridership_halsted$the_year), FUN=sum)
-          #   colnames(df_halsted) = c("Year","Rides")
-          #   splitLayout(
-          #     plotOutput("leftboxT"),
-          #     output$tabLeftHalsted <- DT::renderDataTable(
-          #       df_halsted, 
-          #       options = list(searching = FALSE, pageLength = 8, lengthChange = FALSE, order = list(list(0, 'asc'))
-          #       ), rownames = FALSE 
-          #     )
-          #   )
-          # }
-      # }
-      # else if(input$type_x == "Week Day"){
-      #   justOneYear <- justOneYearReactive()
-      #   df <- aggregate(justOneYear$rides, by=list(Category=justOneYear$weekday), FUN=sum)
-      #   colnames(df) = c("week day","rides")
-      #   verticalLayout(
-      #     splitLayout(
-      #       plotOutput("leftboxT",width="100%"),
-      #       DT::renderDataTable(
-      #         df, 
-      #         options = list(searching = FALSE, pageLength = 8, lengthChange = FALSE, order = list(list(0, 'asc'))
-      #         ), rownames = FALSE 
-      #       )
-      #     ),
-      #   )
-      # }
-      # else if(input$type_x == "Daily"){
-      #   justOneYear <- justOneYearReactive()
-      #   df <- data.frame(justOneYear$updated_date, justOneYear$rides)
-      #   colnames(df) = c("date","rides")
-      #   verticalLayout(
-      #     splitLayout(
-      #       plotOutput("leftboxT",width="100%"),
-      #       DT::renderDataTable(
-      #         df, 
-      #         options = list(searching = FALSE, pageLength = 8, lengthChange = FALSE, order = list(list(0, 'asc'))
-      #         ), rownames = FALSE 
-      #       )
-      #     ),
-      #   )
-      # }
-      # else if(input$type_x == "Monthly"){
-      #   justOneYear <- justOneYearReactive()
-      #   df <- aggregate(justOneYear$rides, by=list(Category=justOneYear$the_month), FUN=sum)
-      #   colnames(df) = c("month","rides")
-      #   verticalLayout(
-      #     splitLayout(
-      #       plotOutput("leftboxT",width="100%"),
-      #       DT::renderDataTable(
-      #         df, 
-      #         options = list(searching = FALSE, pageLength = 8, lengthChange = FALSE, order = list(list(0, 'asc'))
-      #         ), rownames = FALSE 
-      #       )
-      #     ),
-      #   )
-      # }
-      # else{
-      #   justOneYear <- justOneYearReactive()
-      #   df <- aggregate(justOneYear$rides, by=list(Category=justOneYear$weekday), FUN=sum)
-      #   colnames(df) = c("week day","rides")
-      #   df2 <- data.frame(justOneYear$updated_date, justOneYear$rides)
-      #   colnames(df2) = c("date","rides")
-      #   df3 <- aggregate(justOneYear$rides, by=list(Category=justOneYear$the_month), FUN=sum)
-      #   colnames(df3) = c("month","rides")
-      #   verticalLayout(
-      #     splitLayout(
-      #       plotOutput("leftboxT",width="100%"),
-      #       DT::renderDataTable(
-      #         df, 
-      #         options = list(searching = FALSE, pageLength = 8, lengthChange = FALSE, order = list(list(0, 'asc'))
-      #         ), rownames = FALSE 
-      #       )
-      #     ),
-      #     splitLayout(
-      #       plotOutput("leftallT",width="100%"),
-      #       DT::renderDataTable(
-      #         df2, 
-      #         options = list(searching = FALSE, pageLength = 8, lengthChange = FALSE, order = list(list(0, 'asc'))
-      #         ), rownames = FALSE 
-      #       )
-      #     ),
-      #     splitLayout(
-      #       plotOutput("leftall2T",width="100%"),
-      #       DT::renderDataTable(
-      #         df3, 
-      #         options = list(searching = FALSE, pageLength = 8, lengthChange = FALSE, order = list(list(0, 'asc'))
-      #         ), rownames = FALSE 
-      #       )
-      #     )
-      #   )
-      #   
-      # }
+
     
 }
 

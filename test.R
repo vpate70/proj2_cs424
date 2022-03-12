@@ -1104,8 +1104,17 @@ colnames(df) = c("rides","stationname")
 
 
 df <- subset(dfMerge, updated_date == "2021-08-23")
+length( unique(df$stationname))
 latlonstation <- read.csv(file = 'data/lonlat.csv')
-df2 <- data.frame(latlonstation$STATION_NAME,as.numeric(latlonstation$Lat), as.numeric(latlonstation$Long))
-colnames(df2)<-c('stationname','Lat','Long')
+latlonstation <- data.frame(latlonstation$STATION_NAME,as.numeric(latlonstation$Lat), as.numeric(latlonstation$Long))
+colnames(latlonstation)<-c('stationname','Lat','Long')
+latlonstation
+latlonstation <- latlonstation[!duplicated(latlonstation), ]
 df <- merge(df, df2, by = "stationname")
 df$stationname
+length( unique(df$stationname))
+
+length(unique(df$stationname))
+
+ggplot(data.frame()) + geom_point() + labs(x="Day", y="Rides")
+dim(data.frame)

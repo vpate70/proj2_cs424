@@ -167,6 +167,7 @@ dfMerge <- do.call("rbind", allstationdf)
 dfMerge <- dfMerge[order(dfMerge$stationname),]
 
 latlonstation <- read.csv(file = 'data/lonlat.csv')
+
 x_con <- sort(c("Daily", "Monthly", "Week Day", "All For Year", "Default"))
 tflist <- c("FALSE","TRUE")
 
@@ -359,6 +360,13 @@ server <- function(input, output,session) {
     return(df)
   })
   
+  mapChangeDF <- reactive({
+    mr <- mapReactive()
+    df <- changeDF()
+    df <- merge(df, df2, by = "stationname")
+    return(df)
+  })
+  
   changeDF <- reactive({
     df1 <- subset(dfMerge, updated_date == input$date1)
     df1 <- data.frame(df1$rides,df1$stationname)
@@ -418,21 +426,41 @@ server <- function(input, output,session) {
     })
     
     output$leaf <- renderLeaflet({
-      df <- mapReactive()
-      map <- leaflet()
-      map <- addTiles(map)
-      map <- setView(map, lng = -87.683177, lat = 41.921832, zoom = 11.3)
-      map <- addAwesomeMarkers(map, lng = df$Long, lat = df$Lat, popup = df$stationname, layerId = df$stationname, icon = awesomeIcons(
-        icon = 'ios-close',
-        iconColor = 'white',
-        library = 'ion',
-        markerColor = 'blue'
-      ))
-      map <- addCircles(map,lng = df$Long, lat = df$Lat, weight = 1,
-                 radius = sqrt(df$rides) * 25
-      )
-      map <- addTiles(map = map, urlTemplate = backgroundMap())
-      map
+      if(input$datesChange == 'One Day'){
+        df <- mapReactive()
+        map <- leaflet()
+        map <- addTiles(map)
+        map <- setView(map, lng = -87.683177, lat = 41.921832, zoom = 11.3)
+        map <- addAwesomeMarkers(map, lng = df$Long, lat = df$Lat, popup = df$stationname, layerId = df$stationname, icon = awesomeIcons(
+          icon = 'ios-close',
+          iconColor = 'white',
+          library = 'ion',
+          markerColor = 'blue'
+        ))
+        map <- addCircles(map,lng = df$Long, lat = df$Lat, weight = 1,
+                   radius = sqrt(df$rides) * 25
+        )
+        map <- addTiles(map = map, urlTemplate = backgroundMap())
+        map
+      }
+      else{
+        df <- mapChangeDF()
+        df$colour <- ifelse(df$rides < 0,"red","blue")
+        map <- leaflet()
+        map <- addTiles(map)
+        map <- setView(map, lng = -87.683177, lat = 41.921832, zoom = 11.3)
+        map <- addAwesomeMarkers(map, lng = df$Long, lat = df$Lat, popup = df$stationname, layerId = df$stationname, icon = awesomeIcons(
+          icon = 'ios-close',
+          iconColor = 'white',
+          library = 'ion',
+          markerColor = 'blue'
+        ))
+        map <- addCircles(map,lng = df$Long, lat = df$Lat, weight = 1,
+                          radius = sqrt(abs(df$rides)) * 25, color = df$colour
+        )
+        map <- addTiles(map = map, urlTemplate = backgroundMap())
+        map
+      }
     })
     
     observeEvent(input$leaf_marker_click,{
@@ -449,7 +477,7 @@ server <- function(input, output,session) {
       #                     markerColor = 'red'
       #                   ))
       updateSelectInput(session, 'rstation_name', "Select the station name2", unique(dfMerge$stationname),
-                        selected = clicked_point$layerId)
+                        selected = clicked_point$id)
     }
     )
     
@@ -487,16 +515,25 @@ server <- function(input, output,session) {
           )
         }
         else if(input$rtype_x == "Week Day"){
-
             rdf <- stationReactive()
             rdf <- subset(rdf, the_year == input$rYear)
+            if(nrow(rdf)==0){
+              verticalLayout(
+                renderPlot({
+                  ggplot(data.frame()) +
+                    labs(x="Day", y="Rides") + ggtitle(paste(input$rstation_name,"each day of the week for",input$rYear))
+                })
+              )
+            }
+            else{
             df <- aggregate(rdf$rides, by=list(Category=rdf$weekday), FUN=sum)
             verticalLayout(
-            renderPlot({
-            ggplot(df, aes(x=Category, y=x)) + geom_bar( stat='identity', fill="steelblue") + 
-              labs(x="Day", y="Rides") + scale_y_continuous(label=comma) + ggtitle(paste(input$rstation_name,"each day of the week for",input$rYear))
-            })
+              renderPlot({
+                ggplot(df, aes(x=Category, y=x)) + geom_bar( stat='identity', fill="steelblue") + 
+                  labs(x="Day", y="Rides") + scale_y_continuous(label=comma) + ggtitle(paste(input$rstation_name,"each day of the week for",input$rYear))
+              })
             )
+            }
         }
         else if(input$rtype_x == "Daily"){
           rdf <- stationReactive()

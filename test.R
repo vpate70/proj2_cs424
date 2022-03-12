@@ -1100,3 +1100,12 @@ df <- merge(df1, df2, by = "stationname")
 
 df$rides <- as.numeric(df$rides.x) - as.numeric(df$rides.y)
 colnames(df) = c("rides","stationname")
+
+
+
+df <- subset(dfMerge, updated_date == "2021-08-23")
+latlonstation <- read.csv(file = 'data/lonlat.csv')
+df2 <- data.frame(latlonstation$STATION_NAME,as.numeric(latlonstation$Lat), as.numeric(latlonstation$Long))
+colnames(df2)<-c('stationname','Lat','Long')
+df <- merge(df, df2, by = "stationname")
+df$stationname

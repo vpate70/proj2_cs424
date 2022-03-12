@@ -326,27 +326,37 @@ server <- function(input, output,session) {
   
   diffReactive <- reactive({
     df <- changeDF()
+    df$colour <- ifelse(df$rides < 0,"negative","positive")
+    
     if(input$longGraphOrder == "Alphabetical"){
       return(
-        ggplot(df, aes(x=stationname,y=rides)) + geom_bar( stat='identity', fill='steelblue') + 
-          labs(x="Station", y="Rides")+ scale_y_continuous(label=comma) +ggtitle(label = paste(wday(ymd(dateOneReactive()),label=TRUE),month(ymd(dateOneReactive()),label=TRUE),day(ymd(dateOneReactive())),year(ymd(dateOneReactive())))) +theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)
+        ggplot(df, aes(x=stationname,y=rides)) + geom_bar( stat='identity', aes(fill=colour)) + scale_fill_manual(values=c(positive="steelblue",negative="firebrick3"))+
+          labs(x="Station", y="Rides")+ scale_y_continuous(label=comma) +ggtitle(label = paste(wday(ymd(dateOneReactive()),label=TRUE),month(ymd(dateOneReactive()),label=TRUE),day(ymd(dateOneReactive())),year(ymd(dateOneReactive())),'and',wday(ymd(input$date2),label=TRUE),month(ymd(input$date2),label=TRUE),day(ymd(input$date2)),year(ymd(input$date2)) )) +theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)
           )
       )
     }
     else if(input$longGraphOrder == "Minimum"){
       return(
-        ggplot(df, aes(reorder(stationname, rides),rides)) + geom_bar( stat='identity', fill='steelblue') + 
-          labs(x="Station", y="Rides")+ scale_y_continuous(label=comma) +ggtitle(label = paste(wday(ymd(dateOneReactive()),label=TRUE),month(ymd(dateOneReactive()),label=TRUE),day(ymd(dateOneReactive())),year(ymd(dateOneReactive())))) +theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)
+        ggplot(df, aes(reorder(stationname, rides),rides)) + geom_bar( stat='identity', fill='steelblue') + scale_fill_manual(values=c(positive="steelblue",negative="firebrick3"))+
+          labs(x="Station", y="Rides")+ scale_y_continuous(label=comma) +ggtitle(label = paste(wday(ymd(dateOneReactive()),label=TRUE),month(ymd(dateOneReactive()),label=TRUE),day(ymd(dateOneReactive())),year(ymd(dateOneReactive())),'and',wday(ymd(input$date2),label=TRUE),month(ymd(input$date2),label=TRUE),day(ymd(input$date2)),year(ymd(input$date2)) )) +theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)
           )
       )
     }
     else{
       return(
-        ggplot(df, aes(reorder(stationname, -rides),rides)) + geom_bar( stat='identity', fill='steelblue') + 
-          labs(x="Station", y="Rides")+ scale_y_continuous(label=comma) +ggtitle(label = paste(wday(ymd(dateOneReactive()),label=TRUE),month(ymd(dateOneReactive()),label=TRUE),day(ymd(dateOneReactive())),year(ymd(dateOneReactive())))) +theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)
+        ggplot(df, aes(reorder(stationname, -rides),rides)) + geom_bar( stat='identity', fill='steelblue') + scale_fill_manual(values=c(positive="steelblue",negative="firebrick3"))+
+          labs(x="Station", y="Rides")+ scale_y_continuous(label=comma) +ggtitle(label = paste(wday(ymd(dateOneReactive()),label=TRUE),month(ymd(dateOneReactive()),label=TRUE),day(ymd(dateOneReactive())),year(ymd(dateOneReactive())),'and',wday(ymd(input$date2),label=TRUE),month(ymd(input$date2),label=TRUE),day(ymd(input$date2)),year(ymd(input$date2)) )) +theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)
           )
       )
     }
+  })
+  
+  mapReactive <- reactive({
+    df<-subset(dfMerge, updated_date == input$date1)
+    df2 <- data.frame(latlonstation$STATION_NAME,as.numeric(latlonstation$Lat), as.numeric(latlonstation$Long))
+    colnames(df2)<-c('stationname','Lat','Long')
+    df <- merge(df, df2, by = "stationname")
+    return(df)
   })
   
   changeDF <- reactive({
@@ -408,15 +418,19 @@ server <- function(input, output,session) {
     })
     
     output$leaf <- renderLeaflet({
+      df <- mapReactive()
       map <- leaflet()
       map <- addTiles(map)
       map <- setView(map, lng = -87.683177, lat = 41.921832, zoom = 11.3)
-      map <- addAwesomeMarkers(map, lng = latlonstation$Long, lat = latlonstation$Lat, popup = latlonstation$STATION_NAME, layerId = latlonstation$STATION_NAME, icon = awesomeIcons(
+      map <- addAwesomeMarkers(map, lng = df$Long, lat = df$Lat, popup = df$stationname, layerId = df$stationname, icon = awesomeIcons(
         icon = 'ios-close',
         iconColor = 'white',
         library = 'ion',
         markerColor = 'blue'
       ))
+      map <- addCircles(map,lng = df$Long, lat = df$Lat, weight = 1,
+                 radius = sqrt(df$rides) * 25
+      )
       map <- addTiles(map = map, urlTemplate = backgroundMap())
       map
     })

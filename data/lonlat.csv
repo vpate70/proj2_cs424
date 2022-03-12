@@ -600,11 +600,11 @@ STOP_ID,DIRECTION_ID,STOP_NAME,STATION_NAME,STATION_DESCRIPTIVE_NAME,MAP_ID,ADA,
 
 30171,N,O'Hare (Terminal Arrival),O'Hare,O'Hare (Blue Line),40890,true,false,true,false,false,false,false,false,false,false,"(41.97766526, -87.90422307)",41.97766526,-87.90422307
 
--1,I,N/A,Randolph/Wabash,-1,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,41.8844310,-87.6261490
+-1,I,N/A,Randolph/Wabash,-1,40200,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,41.8844310,-87.6261490
 
--2,I,N/A,Madison/Wabash,-1,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,41.882023,-87.626098
+-2,I,N/A,Madison/Wabash,-1,40640,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,41.882023,-87.626098
 
--3,I,N/A,Washington/State,-1,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,41.8837,-87.6278
+-3,I,N/A,Washington/State,-1,40500,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,41.8837,-87.6278
 
--4,I,N/A,Homan,-1,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,41.884914,-87.711327
+-4,I,N/A,Homan,-1,41580,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,N/A,41.884914,-87.711327
 

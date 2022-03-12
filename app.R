@@ -338,14 +338,14 @@ server <- function(input, output,session) {
     }
     else if(input$longGraphOrder == "Minimum"){
       return(
-        ggplot(df, aes(reorder(stationname, rides),rides)) + geom_bar( stat='identity', fill='steelblue') + scale_fill_manual(values=c(positive="steelblue",negative="firebrick3"))+
+        ggplot(df, aes(reorder(stationname, rides),rides)) + geom_bar( stat='identity', aes(fill=colour)) + scale_fill_manual(values=c(positive="steelblue",negative="firebrick3"))+
           labs(x="Station", y="Rides")+ scale_y_continuous(label=comma) +ggtitle(label = paste(wday(ymd(dateOneReactive()),label=TRUE),month(ymd(dateOneReactive()),label=TRUE),day(ymd(dateOneReactive())),year(ymd(dateOneReactive())),'and',wday(ymd(input$date2),label=TRUE),month(ymd(input$date2),label=TRUE),day(ymd(input$date2)),year(ymd(input$date2)) )) +theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)
           )
       )
     }
     else{
       return(
-        ggplot(df, aes(reorder(stationname, -rides),rides)) + geom_bar( stat='identity', fill='steelblue') + scale_fill_manual(values=c(positive="steelblue",negative="firebrick3"))+
+        ggplot(df, aes(reorder(stationname, -rides),rides)) + geom_bar( stat='identity', aes(fill=colour)) + scale_fill_manual(values=c(positive="steelblue",negative="firebrick3"))+
           labs(x="Station", y="Rides")+ scale_y_continuous(label=comma) +ggtitle(label = paste(wday(ymd(dateOneReactive()),label=TRUE),month(ymd(dateOneReactive()),label=TRUE),day(ymd(dateOneReactive())),year(ymd(dateOneReactive())),'and',wday(ymd(input$date2),label=TRUE),month(ymd(input$date2),label=TRUE),day(ymd(input$date2)),year(ymd(input$date2)) )) +theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)
           )
       )
@@ -354,66 +354,91 @@ server <- function(input, output,session) {
   
   mapReactive <- reactive({
     df<-subset(dfMerge, updated_date == input$date1)
-    df2 <- data.frame(latlonstation$STATION_NAME,as.numeric(latlonstation$Lat), as.numeric(latlonstation$Long))
-    colnames(df2)<-c('stationname','Lat','Long')
-    df <- merge(df, df2, by = "stationname")
+    df2 <- data.frame(latlonstation$STATION_NAME,as.numeric(latlonstation$Lat), as.numeric(latlonstation$Long), as.numeric(latlonstation$MAP_ID))
+    colnames(df2)<-c('stationname','Lat','Long', 'station_id')
+    df <- merge(df, df2, by = "station_id")
     return(df)
   })
   
   mapChangeDF <- reactive({
-    mr <- mapReactive()
+    df2 <- data.frame(latlonstation$STATION_NAME,as.numeric(latlonstation$Lat), as.numeric(latlonstation$Long), as.numeric(latlonstation$MAP_ID))
+    colnames(df2)<-c('stationname','Lat','Long', 'station_id')
     df <- changeDF()
-    df <- merge(df, df2, by = "stationname")
+    df <- merge(df, df2, by = "station_id")
     return(df)
   })
   
   changeDF <- reactive({
     df1 <- subset(dfMerge, updated_date == input$date1)
-    df1 <- data.frame(df1$rides,df1$stationname)
-    colnames(df1) = c("rides","stationname")
+    df1 <- data.frame(df1$rides,df1$stationname,df1$station_id)
+    colnames(df1) = c("rides","stationname","station_id")
     df2 <- subset(dfMerge, updated_date == input$date2)
-    df2 <- data.frame(df2$rides,df2$stationname)
-    colnames(df2) = c("rides","stationname")
+    df2 <- data.frame(df2$rides,df2$stationname,df2$station_id)
+    
+    colnames(df2) = c("rides","stationname","station_id")
     stn <- setdiff(df1$stationname,df2$stationname)
     for(p in stn){
-      df2[nrow(df2) + 1,] <- c(0,p)
+      df2[nrow(df2) + 1,] <- c(0,p,dfMerge[dfMerge$stationname == p,]$station_id[1])
     }
     stn <- setdiff(df2$stationname,df1$stationname)
     for(x in stn){
-      df1[nrow(df1) + 1,] <- c(0,x)
+      df1[nrow(df1) + 1,] <- c(0,x,dfMerge[dfMerge$stationname == x,]$station_id[1])
     }
-    df <- merge(df1, df2, by = "stationname")
+    df <- merge(df1, df2, by = "station_id")
     
     df$rides <- as.numeric(df$rides.x) - as.numeric(df$rides.y)
-    colnames(df) = c("stationname","ridex","ridey","rides")
+    colnames(df) = c("station_id","ridex","stationname","ridey","stationname2","rides")
+    return(df)
+  })
+  
+  tableChange <- reactive({
+    df <- negPos()
+    df <- data.frame(df$stationname.x,as.numeric(df$rides))
+    colnames(df) <- c('stationname','rides_difference')
+    return(df)
+  })
+  
+  negPos <- reactive({
+    df3 <- data.frame(latlonstation$STATION_NAME,as.numeric(latlonstation$Lat), as.numeric(latlonstation$Long), as.numeric(latlonstation$MAP_ID))
+    colnames(df3)<-c('stationname','Lat','Long', 'station_id')
+    df1 <- subset(dfMerge, updated_date == input$date1)
+    df1 <- data.frame(df1$rides,df1$stationname,df1$station_id)
+    colnames(df1) = c("rides","stationname","station_id")
+    df2 <- subset(dfMerge, updated_date == input$date2)
+    df2 <- data.frame(df2$rides,df2$stationname,df2$station_id)
+    
+    colnames(df2) = c("rides","stationname","station_id")
+    stn <- setdiff(df1$stationname,df2$stationname)
+    for(p in stn){
+      df2[nrow(df2) + 1,] <- c(0,p,dfMerge[dfMerge$stationname == p,]$station_id[1])
+    }
+    stn <- setdiff(df2$stationname,df1$stationname)
+    for(x in stn){
+      df1[nrow(df1) + 1,] <- c(0,x,dfMerge[dfMerge$stationname == x,]$station_id[1])
+    }
+    df <- merge(df1, df2, by = "station_id")
+    
+    df$rides <- as.numeric(df$rides.x) - as.numeric(df$rides.y)
+    colnames(df) = c("station_id","ridex","stationname","ridey","stationname2","rides")
+    df <- data.frame(as.numeric(df$station_id), df$stationname,as.numeric(df$rides))
+    colnames(df) <- c("station_id","stationname","rides")
+    
+    df <- merge(df, df3, by = "station_id")
+    df<-df[!duplicated(df), ]
     return(df)
   })
   
   output$tab1 <- DT::renderDataTable(
-    subset(dfMerge, updated_date == dateOneReactive())[ , c("stationname", "rides")] , 
+    subset(dfMerge, updated_date == dateOneReactive())[, c("stationname", "rides")], 
     options = list(searching = FALSE, pageLength = 20, lengthChange = FALSE, order = list(list(0, 'asc'))
     ), rownames = FALSE 
   )
   
   output$tab2 <- DT::renderDataTable(
-    changeDF(), 
+    tableChange(), 
     options = list(searching = FALSE, pageLength = 20, lengthChange = FALSE, order = list(list(0, 'asc'))
     ), rownames = FALSE 
   )
-  
-  #change zoom based on map and make button to change it add explanation why the 3 backgrounds are good
-   backgroundMap <- reactive({ 
-     t = 0
-     if(t==0){
-      return("https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png")
-     }
-     else if(t == 1){
-       return("https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png")
-     }
-     else{
-       return("https://server.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/tile/{z}/{y}/{x}")
-     }
-   })
   
     output$main <- renderPlot({
       orderByReactive()
@@ -440,16 +465,22 @@ server <- function(input, output,session) {
         map <- addCircles(map,lng = df$Long, lat = df$Lat, weight = 1,
                    radius = sqrt(df$rides) * 25
         )
-        map <- addTiles(map = map, urlTemplate = backgroundMap())
+        map <- addTiles(map = map, urlTemplate = "https://server.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/tile/{z}/{y}/{x}", group = "Default")
+        map <- addTiles(map = map, urlTemplate = "https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png", group = "Dark")
+        map <- addTiles(map = map, urlTemplate = "https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png", group = "Light")
+        map <- addLayersControl(map = map,
+          baseGroups = c("Default", "Dark", "Light"),
+          options = layersControlOptions(collapsed = FALSE)
+        )
         map
       }
       else{
-        df <- mapChangeDF()
+        df <- negPos()
         df$colour <- ifelse(df$rides < 0,"red","blue")
         map <- leaflet()
         map <- addTiles(map)
         map <- setView(map, lng = -87.683177, lat = 41.921832, zoom = 11.3)
-        map <- addAwesomeMarkers(map, lng = df$Long, lat = df$Lat, popup = df$stationname, layerId = df$stationname, icon = awesomeIcons(
+        map <- addAwesomeMarkers(map, lng = df$Long, lat = df$Lat, popup = df$stationname.x, layerId = df$stationname.x, icon = awesomeIcons(
           icon = 'ios-close',
           iconColor = 'white',
           library = 'ion',
@@ -458,7 +489,13 @@ server <- function(input, output,session) {
         map <- addCircles(map,lng = df$Long, lat = df$Lat, weight = 1,
                           radius = sqrt(abs(df$rides)) * 25, color = df$colour
         )
-        map <- addTiles(map = map, urlTemplate = backgroundMap())
+        map <- addTiles(map = map, urlTemplate = "https://server.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/tile/{z}/{y}/{x}", group = "Default")
+        map <- addTiles(map = map, urlTemplate = "https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png", group = "Dark")
+        map <- addTiles(map = map, urlTemplate = "https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png", group = "Light")
+        map <- addLayersControl(map = map,
+                                baseGroups = c("Default", "Dark", "Light"),
+                                options = layersControlOptions(collapsed = FALSE)
+        )
         map
       }
     })
@@ -476,7 +513,7 @@ server <- function(input, output,session) {
       #                     library = 'ion',
       #                     markerColor = 'red'
       #                   ))
-      updateSelectInput(session, 'rstation_name', "Select the station name2", unique(dfMerge$stationname),
+      updateSelectInput(session, 'rstation_name', "Select the station name", unique(dfMerge$stationname),
                         selected = clicked_point$id)
     }
     )

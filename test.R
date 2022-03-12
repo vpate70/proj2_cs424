@@ -1082,25 +1082,24 @@ latlonstation[nrow(latlonstation) + 1,] = c(-1, 'I','N/A', "Washington/State",-1
 latlonstation[nrow(latlonstation) + 1,] = c(-1, 'I','N/A', "Homan",-1,'N/A','N/A', 'N/A','N/A', 'N/A','N/A', 'N/A','N/A', 'N/A','N/A', 'N/A','N/A',41.8837000, -87.6278000)
 latlonstation$STATION_NAME == "Randolph/Wabash"
 
-df1 <- subset(dfMerge, updated_date == "2021-08-23")
-df1 <- data.frame(df1$rides,df1$stationname)
-colnames(df1) = c("rides","stationname")
+df1 <- subset(dfMerge, updated_date == "2011-08-23")
+df1 <- data.frame(df1$rides,df1$stationname,df1$station_id)
+colnames(df1) = c("rides","stationname","station_id")
 df2 <- subset(dfMerge, updated_date == "2011-08-22")
-df2 <- data.frame(df2$rides,df2$stationname)
-colnames(df2) = c("rides","stationname")
+df2 <- data.frame(df2$rides,df2$stationname,df2$station_id)
+colnames(df2) = c("rides","stationname","station_id")
 stn <- setdiff(df1$stationname,df2$stationname)
 for(p in stn){
   df2[nrow(df2) + 1,] <- c(0,p)
 }
 stn <- setdiff(df2$stationname,df1$stationname)
 for(x in stn){
-    df1[nrow(df1) + 1,] <- c(0,x)
-  }
-df <- merge(df1, df2, by = "stationname")
+  df1[nrow(df1) + 1,] <- c(0,x)
+}
+df <- merge(df1, df2, by = "station_id")
 
 df$rides <- as.numeric(df$rides.x) - as.numeric(df$rides.y)
-colnames(df) = c("rides","stationname")
-
+colnames(df) = c("station_id","stationname","ridex","ridey","rides")
 
 
 df <- subset(dfMerge, updated_date == "2021-08-23")
@@ -1118,3 +1117,38 @@ length(unique(df$stationname))
 
 ggplot(data.frame()) + geom_point() + labs(x="Day", y="Rides")
 dim(data.frame)
+
+unique(dfMerge$stationname)
+unique(latlonstation$STATION_NAME)
+setdiff(unique(dfMerge$stationname), unique(latlonstation$STATION_NAME))
+setdiff( unique(latlonstation$STATION_NAME),unique(dfMerge$stationname))
+
+
+latlonstation <- read.csv(file = 'data/lonlat.csv')
+df3 <- data.frame(latlonstation$STATION_NAME,as.numeric(latlonstation$Lat), as.numeric(latlonstation$Long), as.numeric(latlonstation$MAP_ID))
+colnames(df3)<-c('stationname','Lat','Long', 'station_id')
+df1 <- subset(dfMerge, updated_date == "2010-06-16")
+df1 <- data.frame(df1$rides,df1$stationname,df1$station_id)
+colnames(df1) = c("rides","stationname","station_id")
+df2 <- subset(dfMerge, updated_date == "2021-08-22")
+df2 <- data.frame(df2$rides,df2$stationname,df2$station_id)
+
+colnames(df2) = c("rides","stationname","station_id")
+stn <- setdiff(df1$stationname,df2$stationname)
+for(p in stn){
+  df2[nrow(df2) + 1,] <- c(0,p,dfMerge[dfMerge$stationname == p,]$station_id[1])
+}
+stn <- setdiff(df2$stationname,df1$stationname)
+for(x in stn){
+  df1[nrow(df1) + 1,] <- c(0,x,dfMerge[dfMerge$stationname == x,]$station_id[1])
+}
+df <- merge(df1, df2, by = "station_id")
+
+df$rides <- as.numeric(df$rides.x) - as.numeric(df$rides.y)
+colnames(df) = c("station_id","ridex","stationname","ridey","stationname2","rides")
+df <- data.frame(as.numeric(df$station_id), df$stationname,as.numeric(df$rides))
+colnames(df) <- c("station_id","stationname","rides")
+
+df <- merge(df, df3, by = "station_id")
+
+df<-df[!duplicated(df), ]

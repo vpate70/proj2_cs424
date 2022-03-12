@@ -167,15 +167,18 @@ dfMerge <- do.call("rbind", allstationdf)
 dfMerge <- dfMerge[order(dfMerge$stationname),]
 
 latlonstation <- read.csv(file = 'data/lonlat.csv')
-
 x_con <- sort(c("Daily", "Monthly", "Week Day", "All For Year", "Default"))
 tflist <- c("FALSE","TRUE")
+
+minDate <- min(dfMerge$updated_date)
+maxDate <- max(dfMerge$updated_date)
+
 # Define UI for application
 ui <- dashboardPage(
   dashboardHeader(title = "CS 424 Spring 2022 Project 2"),
   #edit to make mini menu items for both
   
-  dashboardSidebar(disable = FALSE, collapsed = FALSE, width = 275,
+  dashboardSidebar(disable = FALSE, collapsed = FALSE,
                   
                    
                    sidebarMenu(
@@ -202,10 +205,18 @@ ui <- dashboardPage(
                    ),
                    menuItem("Left Options",
                    actionButton("reset_button", "Reset Map View"),
+                   selectInput("longGraphOrder", "Order By", c("Alphabetical","Minimum","Maximum"), selected = "Alphabetical"),
+                   selectInput("datesChange", "Date Constraints",c("One Day", "Two Day Differ"), selected = "One Day"),
+                   conditionalPanel(
+                     condition = "input.datesChange == 'One Day'",
                      actionButton("prev_day", "Prev Day"),
-                     actionButton("next_day", "Next Day"),
-                   dateInput("date",label = "date1"), #set to aug date and add functionality
-                   dateRangeInput("date",label = "Choose Two Dates")
+                     actionButton("next_day", "Next Day")
+                   ),
+                   dateInput("date1",label = "date1", value = "2021-8-23", min = minDate, max = maxDate),
+                   conditionalPanel(
+                    condition = "input.datesChange == 'Two Day Differ'",
+                    dateInput("date2",label = "date2",value = "2021-8-22", min = minDate, max = maxDate)
+                   )
                    )
   ),
   
@@ -216,13 +227,21 @@ ui <- dashboardPage(
         fluidRow(
           column(6,
                  fluidRow(
-                   plotOutput("main",width="100%"),
+                   
+                   plotOutput("main",width="100%")
+                   
                  ),
                  fluidRow(
-                   leafletOutput("leaf"),
+                   tags$style(type = "text/css", "#leaf {height: calc(65vh - 80px) !important;}"),
+                   splitLayout(
+                     cellWidths = c('80%','20%'),
+                     leafletOutput("leaf"),
+                     dataTableOutput("tab1")
+                   )
                  ),
                  
           ),
+          
           column(6,
                  plotOutput("rightBox",width="100%"),
           )
@@ -247,6 +266,7 @@ ui <- dashboardPage(
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
+  
   stationReactive <- reactive({
     # input$rstationname
     for(sdf in allstationdf){
@@ -256,9 +276,11 @@ server <- function(input, output) {
     }
   })
   
-  output$rightui <- renderUI({
-    
-  })
+  output$tab1 <- DT::renderDataTable(
+    dfMerge, 
+    options = list(searching = FALSE, pageLength = 8, lengthChange = FALSE, order = list(list(0, 'asc'))
+    ), rownames = FALSE 
+  )
   
   output$rightBox <- renderPlot({
     if(input$rtype_x == "Default")
@@ -268,7 +290,7 @@ server <- function(input, output) {
         rdf <- stationReactive()
         df <- aggregate(rdf$rides, by=list(Category=rdf$the_year), FUN=sum)
         ggplot(df, aes(x=Category, y=x)) + geom_bar( stat='identity', fill="blue") + 
-          labs(x="Date", y="Rides")+ scale_y_continuous(label=comma)+ggtitle(paste("All time ridership for",input$rstation_name,"Station"))
+          labs(x="Station", y="Rides")+ scale_y_continuous(label=comma)+ggtitle(paste("All time ridership for",input$rstation_name,"Station"))
         }
   })
   #change zoom based on map and make button to change it add explanation why the 3 backgrounds are good
@@ -297,20 +319,28 @@ server <- function(input, output) {
     output$leaf <- renderLeaflet({
       map <- leaflet()
       map <- addTiles(map)
-      map <- setView(map, lng = -87.683177, lat = 41.921832, zoom = 9.5)
+      map <- setView(map, lng = -87.683177, lat = 41.921832, zoom = 11.3)
       map <- addMarkers(map, lng = latlonstation$Long, lat = latlonstation$Lat, popup = latlonstation$STATION_NAME)
       map <- addTiles(map = map, urlTemplate = backgroundMap())
       map
     })
     
-    output$mapui <- renderUI({
-      tags$style(type = "text/css", "#map {height: calc(100vh - 80px) !important;}")
-      leafletOutput("leaf")
+    
+    observeEvent(input$prev_day,
+      {
+        updateDateInput( getDefaultReactiveDomain(), "date1", label = "date1", value = (ymd(input$date1) - days(1)), min = minDate,max = maxDate)
+      }
+      )
+    
+    observeEvent(input$next_day,
+      {
+        updateDateInput( getDefaultReactiveDomain(), "date1", label = "date1", value = (ymd(input$date1) + days(1)), min = minDate,max = maxDate)
     })
     
-    observe({
-      input$reset_button
-      leafletProxy("leaf") %>% setView(lat = 41.921832, lng = -87.683177, zoom = 9.5)
+    observeEvent(
+      input$reset_button,
+      {
+      leafletProxy("leaf") %>% setView(lat = 41.921832, lng = -87.683177, zoom = 11.3)
     })
 }
 

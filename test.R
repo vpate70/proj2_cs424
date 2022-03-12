@@ -1062,9 +1062,22 @@ allstationdf <-list(s_Jefferson_Park,s_Cermak___Chinatown,s_Central___Lake,s_Dem
 dfMerge <- do.call("rbind", allstationdf)
 dfMerge <- dfMerge[order(dfMerge$stationname),]
 
+
 latlonstation <- read.csv(file = 'data/lonlat.csv')
 for(sdf in allstationdf)
 {
   sdf
 }
 sdf$stationname[1]
+
+latlonstation <- read.csv(file = 'data/lonlat.csv')
+#added directly to csv
+# 41.884431, -87.626149
+latlonstation[nrow(latlonstation) + 1,] = c(-1, 'I','N/A', "Randolph/Wabash",-1,'N/A','N/A', 'N/A','N/A', 'N/A','N/A', 'N/A','N/A', 'N/A','N/A', 'N/A','N/A',41.8844310, -87.6261490)
+# 41.882023, -87.626098
+latlonstation[nrow(latlonstation) + 1,] = c(-1, 'I','N/A', "Madison/Wabash",-1,'N/A','N/A', 'N/A','N/A', 'N/A','N/A', 'N/A','N/A', 'N/A','N/A', 'N/A','N/A',41.8820230, -87.6260980)
+#41.8837, -87.6278
+latlonstation[nrow(latlonstation) + 1,] = c(-1, 'I','N/A', "Washington/State",-1,'N/A','N/A', 'N/A','N/A', 'N/A','N/A', 'N/A','N/A', 'N/A','N/A', 'N/A','N/A',41.8837000, -87.6278000)
+# 41.884914, -87.711327
+latlonstation[nrow(latlonstation) + 1,] = c(-1, 'I','N/A', "Homan",-1,'N/A','N/A', 'N/A','N/A', 'N/A','N/A', 'N/A','N/A', 'N/A','N/A', 'N/A','N/A',41.8837000, -87.6278000)
+latlonstation$STATION_NAME == "Randolph/Wabash"

@@ -174,6 +174,7 @@ tflist <- c("FALSE","TRUE")
 minDate <- min(dfMerge$updated_date)
 maxDate <- max(dfMerge$updated_date)
 
+
 # Define UI for application
 ui <- dashboardPage(
   dashboardHeader(title = "CS 424 Spring 2022 Project 2"),
@@ -327,6 +328,7 @@ server <- function(input, output,session) {
   
   diffReactive <- reactive({
     df <- changeDF()
+    df <- df[!duplicated(df), ]
     df$colour <- ifelse(df$rides < 0,"negative","positive")
     
     if(input$longGraphOrder == "Alphabetical"){
@@ -357,6 +359,9 @@ server <- function(input, output,session) {
     df2 <- data.frame(latlonstation$STATION_NAME,as.numeric(latlonstation$Lat), as.numeric(latlonstation$Long), as.numeric(latlonstation$MAP_ID))
     colnames(df2)<-c('stationname','Lat','Long', 'station_id')
     df <- merge(df, df2, by = "station_id")
+    df<- data.frame(as.numeric(df$station_id), df$stationname.x, as.numeric(df$rides),as.numeric(df$Lat),as.numeric(df$Long))
+    colnames(df) <- c('station_id','stationname','rides','Lat','Long')
+    df <- df[!duplicated(df), ]
     return(df)
   })
   
@@ -472,6 +477,7 @@ server <- function(input, output,session) {
           baseGroups = c("Default", "Dark", "Light"),
           options = layersControlOptions(collapsed = FALSE)
         )
+        map <- addLegend(map = map,position = "bottomright", colors = c("red","blue"), labels = c("negative","positive"))
         map
       }
       else{
@@ -496,23 +502,24 @@ server <- function(input, output,session) {
                                 baseGroups = c("Default", "Dark", "Light"),
                                 options = layersControlOptions(collapsed = FALSE)
         )
+        map <- addLegend(map = map,position = "bottomright", colors = c("red","blue"), labels = c("negative","positive"))
         map
       }
     })
     
     observeEvent(input$leaf_marker_click,{
       clicked_point <- input$leaf_marker_click
-      # removeMarker(map = leafletProxy(mapId = "leaf", session), layerId = clicked_point$id)
-      # addAwesomeMarkers(map = leafletProxy(mapId = "leaf", session),
-      #                   lng = clicked_point$lng,
-      #                   lat = clicked_point$lat,
-      #                   layerId = clicked_point$id,
-      #                   icon = awesomeIcons(
-      #                     icon = 'ios-close',
-      #                     iconColor = 'white',
-      #                     library = 'ion',
-      #                     markerColor = 'red'
-      #                   ))
+      removeMarker(map = leafletProxy(mapId = "leaf", session), layerId = clicked_point$id)
+      addAwesomeMarkers(map = leafletProxy(mapId = "leaf", session),
+                        lng = clicked_point$lng,
+                        lat = clicked_point$lat,
+                        layerId = clicked_point$id,
+                        icon = awesomeIcons(
+                          icon = 'ios-close',
+                          iconColor = 'white',
+                          library = 'ion',
+                          markerColor = 'red'
+                        ))
       updateSelectInput(session, 'rstation_name', "Select the station name", unique(dfMerge$stationname),
                         selected = clicked_point$id)
     }
@@ -587,6 +594,15 @@ server <- function(input, output,session) {
         else if(input$rtype_x == "Monthly"){
           rdf <- stationReactive()
           rdf <- subset(rdf, the_year == input$rYear)
+          if(nrow(rdf)==0){
+            verticalLayout(
+              renderPlot({
+                ggplot(data.frame()) +
+                  labs(x="Month", y="Rides") + ggtitle(paste(input$rstation_name,"each month of",input$rYear))
+              })
+            )
+          }
+         else{
           df <- aggregate(rdf$rides, by=list(Category=rdf$the_month), FUN=sum)
           colnames(df) = c("month","rides")
           verticalLayout(
@@ -596,9 +612,30 @@ server <- function(input, output,session) {
             })
           )
         }
+        }
         else{
           rdf <- stationReactive()
           rdf <- subset(rdf, the_year == input$rYear)
+          if(nrow(rdf)==0){
+            df <- data.frame(rdf$updated_date, rdf$rides)
+            colnames(df) = c("date","rides")
+            verticalLayout(
+              renderPlot({
+                ggplot(df, aes(x=date, y=rides)) + geom_bar( stat='identity', fill="steelblue") + 
+                  labs(x="Date", y="Rides") + scale_y_continuous(label=comma) + ggtitle(paste(input$rstation_name,"each day of",input$rYear))
+              }),
+              renderPlot({
+                ggplot(data.frame()) +
+                  labs(x="Day", y="Rides") + ggtitle(paste(input$rstation_name,"each day of the week for",input$rYear))
+              }),
+              renderPlot({
+                ggplot(data.frame()) +
+                  labs(x="Month", y="Rides") + ggtitle(paste(input$rstation_name,"each month of",input$rYear))
+              })
+              
+            )
+          }
+          else {
           df <- data.frame(rdf$updated_date, rdf$rides)
           colnames(df) = c("date","rides")
 
@@ -624,7 +661,7 @@ server <- function(input, output,session) {
             
             
           )
-    
+        }
         }
       }
       else{
@@ -651,6 +688,10 @@ server <- function(input, output,session) {
         else if(input$rtype_x == "Week Day"){
           rdf <- stationReactive()
           rdf <- subset(rdf, the_year == input$rYear)
+          if(nrow(rdf)==0){
+            renderText({paste("No data to show for",input$rstation_name,input$rYear)})
+          }
+          else{
           df <- aggregate(rdf$rides, by=list(Category=rdf$weekday), FUN=sum)
           colnames(df) = c("weekday","rides")
           splitLayout(cellWidths = c('80%','20%'),
@@ -664,6 +705,7 @@ server <- function(input, output,session) {
               ), rownames = FALSE
             )
           )
+        }
         }
         else if(input$rtype_x == "Daily"){
           rdf <- stationReactive()
@@ -685,6 +727,10 @@ server <- function(input, output,session) {
         else if(input$rtype_x == "Monthly"){
           rdf <- stationReactive()
           rdf <- subset(rdf, the_year == input$rYear)
+          if(nrow(rdf)==0){
+            renderText({paste("No data to show for",input$rstation_name,input$rYear)})
+          }
+          else{
           df <- aggregate(rdf$rides, by=list(Category=rdf$the_month), FUN=sum)
           colnames(df) = c("month","rides")
           splitLayout(cellWidths = c('80%','20%'),
@@ -699,9 +745,14 @@ server <- function(input, output,session) {
             )
           )
         }
+        }
         else{
           rdf <- stationReactive()
           rdf <- subset(rdf, the_year == input$rYear)
+          if(nrow(rdf)==0){
+            renderText({paste("No data to show for",input$rstation_name,input$rYear)})
+          }
+          else{
           df <- data.frame(rdf$updated_date, rdf$rides)
           colnames(df) = c("date","rides")
           
@@ -748,7 +799,7 @@ server <- function(input, output,session) {
             
            )
           )
-          
+        }
         }
       }
     })

@@ -1152,3 +1152,13 @@ colnames(df) <- c("station_id","stationname","rides")
 df <- merge(df, df3, by = "station_id")
 
 df<-df[!duplicated(df), ]
+
+
+df<-subset(dfMerge, updated_date == "2021-08-22")
+df2 <- data.frame(latlonstation$STATION_NAME,as.numeric(latlonstation$Lat), as.numeric(latlonstation$Long), as.numeric(latlonstation$MAP_ID))
+colnames(df2)<-c('stationname','Lat','Long', 'station_id')
+df <- merge(df, df2, by = "station_id")
+df<- data.frame(as.numeric(df$station_id), df$stationname.x, as.numeric(df$rides),as.numeric(df$Lat),as.numeric(df$Long))
+colnames(df) <- c('station_id','stationname','rides','Lat','Long')
+df <- df[!duplicated(df), ]
+

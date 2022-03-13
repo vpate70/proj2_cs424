@@ -455,18 +455,37 @@ server <- function(input, output,session) {
       diffReactive()
     })
     
+    rv <- reactiveValues()
+    rv$m <- NULL
+    rv$p <- NULL
+    
     output$leaf <- renderLeaflet({
       if(input$datesChange == 'One Day'){
         df <- mapReactive()
         map <- leaflet()
         map <- addTiles(map)
-        map <- setView(map, lng = -87.683177, lat = 41.921832, zoom = 11.3)
+        new_zoom <- 11.3
+        if(!is.null(input$leaf_zoom)) new_zoom <- input$leaf_zoom
+        map <- setView(map, lng = -87.683177, lat = 41.921832, zoom = new_zoom)
         map <- addAwesomeMarkers(map, lng = df$Long, lat = df$Lat, popup = df$stationname, layerId = df$stationname, icon = awesomeIcons(
           icon = 'ios-close',
           iconColor = 'white',
           library = 'ion',
           markerColor = 'blue'
         ))
+        
+        removeMarker(map = leafletProxy(mapId = "leaf", session), layerId = input$rstation_name)
+        addAwesomeMarkers(map = leafletProxy(mapId = "leaf", session),
+                          lng = df[df$stationname == input$rstation_name,]$Long[1],
+                          lat = df[df$stationname == input$rstation_name,]$Lat[1],
+                          layerId = input$rstation_name,
+                          icon = awesomeIcons(
+                            icon = 'ios-close',
+                            iconColor = 'white',
+                            library = 'ion',
+                            markerColor = 'red'
+                          ))
+        
         map <- addCircles(map,lng = df$Long, lat = df$Lat, weight = 1,
                    radius = sqrt(df$rides) * 25
         )
@@ -478,6 +497,7 @@ server <- function(input, output,session) {
           options = layersControlOptions(collapsed = FALSE)
         )
         map <- addLegend(map = map,position = "bottomright", colors = c("red","blue"), labels = c("negative","positive"))
+        rv$m <- map
         map
       }
       else{
@@ -485,13 +505,27 @@ server <- function(input, output,session) {
         df$colour <- ifelse(df$rides < 0,"red","blue")
         map <- leaflet()
         map <- addTiles(map)
-        map <- setView(map, lng = -87.683177, lat = 41.921832, zoom = 11.3)
+        if(!is.null(input$leaf_zoom)) new_zoom <- input$leaf_zoom
+        map <- setView(map, lng = -87.683177, lat = 41.921832, zoom = new_zoom)
         map <- addAwesomeMarkers(map, lng = df$Long, lat = df$Lat, popup = df$stationname.x, layerId = df$stationname.x, icon = awesomeIcons(
           icon = 'ios-close',
           iconColor = 'white',
           library = 'ion',
           markerColor = 'blue'
         ))
+        
+        removeMarker(map = leafletProxy(mapId = "leaf", session), layerId = input$rstation_name)
+        addAwesomeMarkers(map = leafletProxy(mapId = "leaf", session),
+                          lng = df[df$stationname.x == input$rstation_name,]$Long[1],
+                          lat = df[df$stationname.x == input$rstation_name,]$Lat[1],
+                          layerId = input$rstation_name,
+                          icon = awesomeIcons(
+                            icon = 'ios-close',
+                            iconColor = 'white',
+                            library = 'ion',
+                            markerColor = 'red'
+                          ))
+        
         map <- addCircles(map,lng = df$Long, lat = df$Lat, weight = 1,
                           radius = sqrt(abs(df$rides)) * 25, color = df$colour
         )
@@ -503,12 +537,58 @@ server <- function(input, output,session) {
                                 options = layersControlOptions(collapsed = FALSE)
         )
         map <- addLegend(map = map,position = "bottomright", colors = c("red","blue"), labels = c("negative","positive"))
+        rv$m <- map
         map
       }
     })
+    # 
+    # colorMarker <- reactive({
+    #   map<-leafletProxy(mapId = "leaf",session)
+    #   map <- clearMarkers(map)
+    #   df <- data.frame()
+    #   if(input$datesChange == 'One Day'){
+    #     df <- mapReactive()
+    #     map <- addAwesomeMarkers(map, lng = df$Long, lat = df$Lat, popup = df$stationname, layerId = df$stationname, icon = awesomeIcons(
+    #       icon = 'ios-close',
+    #       iconColor = 'white',
+    #       library = 'ion',
+    #       markerColor = 'blue'
+    #     ))
+    #   }
+    #   else{
+    #     df <- negPos()
+    #     map <- addAwesomeMarkers(map, lng = df$Long, lat = df$Lat, popup = df$stationname.x, layerId = df$stationname.x, icon = awesomeIcons(
+    #       icon = 'ios-close',
+    #       iconColor = 'white',
+    #       library = 'ion',
+    #       markerColor = 'blue'
+    #     ))
+    #   }
+    # })
     
     observeEvent(input$leaf_marker_click,{
       clicked_point <- input$leaf_marker_click
+      
+      map<-leafletProxy(mapId = "leaf",session)
+      map <- clearMarkers(map)
+      if(input$datesChange == 'One Day'){
+        df <- mapReactive()
+        map <- addAwesomeMarkers(map, lng = df$Long, lat = df$Lat, popup = df$stationname, layerId = df$stationname, icon = awesomeIcons(
+          icon = 'ios-close',
+          iconColor = 'white',
+          library = 'ion',
+          markerColor = 'blue'
+        ))
+      }
+      else{
+        df <- negPos()
+        map <- addAwesomeMarkers(map, lng = df$Long, lat = df$Lat, popup = df$stationname.x, layerId = df$stationname.x, icon = awesomeIcons(
+          icon = 'ios-close',
+          iconColor = 'white',
+          library = 'ion',
+          markerColor = 'blue'
+        ))
+      }
       removeMarker(map = leafletProxy(mapId = "leaf", session), layerId = clicked_point$id)
       addAwesomeMarkers(map = leafletProxy(mapId = "leaf", session),
                         lng = clicked_point$lng,
